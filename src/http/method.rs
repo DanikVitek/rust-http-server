@@ -13,16 +13,16 @@ pub enum Method {
     PATCH,
 }
 
-impl fmt::Display for Method {
+impl<'buf> fmt::Display for Method {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
-impl TryFrom<&str> for Method {
-    type Error = InvalidMethod;
+impl<'buf> TryFrom<&'buf str> for Method {
+    type Error = InvalidMethodString<'buf>;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn try_from(value: &'buf str) -> Result<Self, Self::Error> {
         match value {
             "GET" => Ok(Self::GET),
             "DELETE" => Ok(Self::DELETE),
@@ -33,32 +33,24 @@ impl TryFrom<&str> for Method {
             "OPTIONS" => Ok(Self::OPTIONS),
             "TRACE" => Ok(Self::TRACE),
             "PATCH" => Ok(Self::PATCH),
-            _ => Err(InvalidMethod(value.to_string())),
+            _ => Err(InvalidMethodString(value)),
         }
     }
 }
 
-impl FromStr for Method {
-    type Err = InvalidMethod;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Method::try_from(s)
-    }
-}
-
 #[derive(Debug)]
-pub struct InvalidMethod(String);
+pub struct InvalidMethodString<'buf>(&'buf str);
 
-impl InvalidMethod {
-    pub fn str(&self) -> &String {
+impl<'buf> InvalidMethodString<'buf> {
+    pub fn str(&self) -> &str {
         return &self.0;
     }
 }
 
-impl fmt::Display for InvalidMethod {
+impl<'buf> fmt::Display for InvalidMethodString<'buf> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "InvalidMethod: {}", self.str())
     }
 }
 
-impl Error for InvalidMethod {}
+impl<'buf> Error for InvalidMethodString<'buf> {}

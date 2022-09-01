@@ -1,4 +1,4 @@
-use super::method::{InvalidMethod, Method};
+use super::method::{InvalidMethodString, Method};
 use std::{
     error::Error,
     fmt::{Display, Formatter, Result as FmtResult},
@@ -6,13 +6,13 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct Request {
-    path: String,
-    query: Option<String>,
+pub struct Request<'buf> {
+    path: &'buf str,
+    query: Option<&'buf str>,
     method: Method,
 }
 
-impl Display for Request {
+impl<'buf> Display for Request<'buf> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
             f,
@@ -28,27 +28,38 @@ impl Display for Request {
     }
 }
 
-impl TryFrom<&[u8]> for Request {
-    type Error = ParseError;
+impl<'buf> TryFrom<&'buf [u8]> for Request<'buf> {
+    type Error = ParseError<'buf>;
 
     // GET /search?name=abc&sort=1 HTTP/1.1
-    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+    fn try_from(bytes: &'buf [u8]) -> Result<Self, Self::Error> {
         let request = str::from_utf8(bytes)?;
 
-        let (method, request) = get_next_word(request).ok_or(ParseError::InvalidRequest(request.to_string()))?;
-        let (path_n_query, request) = get_next_word(request).ok_or(ParseError::InvalidRequest(request.to_string()))?;
-        let (protocol, request) = get_next_word(request).ok_or(ParseError::InvalidRequest(request.to_string()))?;
+        let (method, request) =
+            get_next_word(request).ok_or(ParseError::InvalidRequest(request))?;
+        let (path_n_query, request) =
+            get_next_word(request).ok_or(ParseError::InvalidRequest(request))?;
+        let (protocol, request) =
+            get_next_word(request).ok_or(ParseError::InvalidRequest(request))?;
 
         if protocol != "HTTP/1.1" {
-            return Err(ParseError::InvalidProtocol(protocol.to_string()));
+            return Err(ParseError::InvalidProtocol(protocol));
         }
 
         let mut path_n_query = path_n_query.split('?');
 
+        let method = method
+            .try_into()
+            .map_err(|_| ParseError::InvalidMethod(method))?;
+        let path = path_n_query
+            .next()
+            .ok_or(ParseError::InvalidRequest(request))?;
+        let query = path_n_query.next();
+
         Ok(Self {
-            method: method.parse::<Method>()?,
-            path: path_n_query.next().ok_or(ParseError::InvalidRequest(request.to_string()))?.to_string(),
-            query: path_n_query.next().map(str::to_string),
+            method,
+            path,
+            query,
         })
     }
 }
@@ -69,28 +80,28 @@ fn get_next_word(request: &str) -> Option<(&str, &str)> {
 }
 
 #[derive(Debug)]
-pub enum ParseError {
-    InvalidRequest(String),
+pub enum ParseError<'buf> {
+    InvalidRequest(&'buf str),
     InvalidEncoding,
-    InvalidProtocol(String),
-    InvalidMethod(String),
+    InvalidProtocol(&'buf str),
+    InvalidMethod(&'buf str),
 }
 
-impl From<Utf8Error> for ParseError {
+impl<'buf> From<Utf8Error> for ParseError<'buf> {
     #[inline]
     fn from(_: Utf8Error) -> Self {
         ParseError::InvalidEncoding
     }
 }
 
-impl From<InvalidMethod> for ParseError {
+impl<'buf> From<&'buf InvalidMethodString<'buf>> for ParseError<'buf> {
     #[inline]
-    fn from(e: InvalidMethod) -> Self {
-        ParseError::InvalidMethod(e.str().clone())
+    fn from(e: &'buf InvalidMethodString) -> Self {
+        ParseError::InvalidMethod(e.str())
     }
 }
 
-impl ParseError {
+impl<'buf> ParseError<'buf> {
     pub fn message(&self) -> String {
         match self {
             Self::InvalidRequest(e) => format!("Invalid Request: {}", e),
@@ -101,10 +112,10 @@ impl ParseError {
     }
 }
 
-impl Display for ParseError {
+impl<'buf> Display for ParseError<'buf> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(f, "{}", self.message())
     }
 }
 
-impl Error for ParseError {}
+impl<'buf> Error for ParseError<'buf> {}
