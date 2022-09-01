@@ -8,7 +8,7 @@ use std::{
 #[derive(Debug)]
 pub struct Request<'buf> {
     path: &'buf str,
-    query: Option<&'buf str>,
+    query_string: Option<&'buf str>,
     method: Method,
 }
 
@@ -20,7 +20,7 @@ impl<'buf> Display for Request<'buf> {
             &self.method,
             &self.path,
             &self
-                .query
+                .query_string
                 .as_ref()
                 .map(|s| format!("?{}", s))
                 .unwrap_or(String::default())
@@ -54,12 +54,12 @@ impl<'buf> TryFrom<&'buf [u8]> for Request<'buf> {
         let path = path_n_query
             .next()
             .ok_or(ParseError::InvalidRequest(request))?;
-        let query = path_n_query.next();
+        let query_string = path_n_query.next();
 
         Ok(Self {
             method,
             path,
-            query,
+            query_string,
         })
     }
 }
