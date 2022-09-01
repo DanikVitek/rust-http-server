@@ -35,21 +35,6 @@ impl TryFrom<&[u8]> for Request {
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
         let request = str::from_utf8(bytes)?;
 
-        fn get_next_word(request: &str) -> Option<(&str, &str)> {
-            for (i, ch) in request.chars().enumerate() {
-                if ch.is_ascii_whitespace() {
-                    let word = &request[..i];
-                    let rest = &request[i + ch.len_utf8()..];
-                    if word.is_empty() {
-                        return get_next_word(rest);
-                    }
-                    return Some((word, rest));
-                }
-            }
-
-            None
-        }
-
         let (method, request) = get_next_word(request).ok_or(ParseError::InvalidRequest(request.to_string()))?;
         let (path_n_query, request) = get_next_word(request).ok_or(ParseError::InvalidRequest(request.to_string()))?;
         let (protocol, request) = get_next_word(request).ok_or(ParseError::InvalidRequest(request.to_string()))?;
@@ -66,6 +51,21 @@ impl TryFrom<&[u8]> for Request {
             query: path_n_query.next().map(str::to_string),
         })
     }
+}
+
+fn get_next_word(request: &str) -> Option<(&str, &str)> {
+    for (i, ch) in request.chars().enumerate() {
+        if ch.is_ascii_whitespace() {
+            let word = &request[..i];
+            let rest = &request[i + ch.len_utf8()..];
+            if word.is_empty() {
+                return get_next_word(rest);
+            }
+            return Some((word, rest));
+        }
+    }
+
+    None
 }
 
 #[derive(Debug)]
