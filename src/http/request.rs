@@ -38,7 +38,12 @@ impl TryFrom<&[u8]> for Request {
         fn get_next_word(request: &str) -> Option<(&str, &str)> {
             for (i, ch) in request.chars().enumerate() {
                 if ch.is_ascii_whitespace() {
-                    return Some((&request[..i], &request[i + 1..]));
+                    let word = &request[..i];
+                    let rest = &request[i + ch.len_utf8()..];
+                    if word.is_empty() {
+                        return get_next_word(rest);
+                    }
+                    return Some((word, rest));
                 }
             }
 
@@ -55,7 +60,7 @@ impl TryFrom<&[u8]> for Request {
 
         let mut path_n_query = path_n_query.split('?');
 
-        Ok(Request {
+        Ok(Self {
             method: method.parse::<Method>()?,
             path: path_n_query.next().ok_or(ParseError::InvalidRequest(request.to_string()))?.to_string(),
             query: path_n_query.next().map(str::to_string),
