@@ -1,6 +1,9 @@
-use std::{net::{TcpListener, SocketAddr, TcpStream}, io::Read};
+use std::{
+    io::{Read, Result as IoResult},
+    net::{SocketAddr, TcpListener, TcpStream},
+};
 
-use crate::http::Request;
+use crate::http::{Request, Response, StatusCode};
 
 pub struct Server {
     host: String,
@@ -20,8 +23,8 @@ impl Server {
         loop {
             match listener.accept() {
                 Err(e) => println!("Failed to establish TCP connection: {}", e),
-                
-                Ok((stream, addr)) => Server::process_connection(stream, addr)
+
+                Ok((stream, addr)) => Server::process_connection(stream, addr),
             }
         }
     }
@@ -32,22 +35,37 @@ impl Server {
         let mut buf = [0; 1024];
         match stream.read(&mut buf) {
             Err(e) => println!("Failed to read the stream: {}", e),
-            
+
             Ok(n) => {
                 println!("Received {} bytes", n);
-                if n == 0 { return; }
-
-                match Request::try_from(&buf as &[u8]) {
-                    Err(e) => println!("Failed to parse request: {}", e),
-
-                    Ok(request) => Server::process_request(request, addr),
+                if n == 0 {
+                    return;
                 }
-            },
+
+                let response_result = match Request::try_from(&buf as &[u8]) {
+                    Err(e) => {
+                        println!("Failed to parse request: {}", e);
+                        let bad_req = Response::new(
+                            StatusCode::BadRequest,
+                            Some("Failed to parse request".to_string()),
+                        );
+                        bad_req.send(&mut stream)
+                    }
+
+                    Ok(request) => Server::process_request(request, stream, addr)
+                };
+
+                if let Err(e) = response_result {
+                    println!("Failed to send response: {}", e);
+                }
+            }
         };
     }
 
-    fn process_request(request: Request, _addr: SocketAddr) {
+    fn process_request(request: Request, mut stream: TcpStream, _addr: SocketAddr) -> IoResult<()> {
         println!("{}", request);
+        let response = Response::new(StatusCode::Ok, Some("<h1>IT WORKS!!!</h1>".to_string()));
+        response.send(&mut stream)
     }
 }
 

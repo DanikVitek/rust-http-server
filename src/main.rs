@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-mod server;
 mod http;
+mod server;
 
 use server::Server;
 
