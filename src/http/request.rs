@@ -1,4 +1,4 @@
-use super::method::{InvalidMethodString, Method};
+use super::{method::{InvalidMethodString, Method}, QueryString};
 use std::{
     error::Error,
     fmt::{Display, Formatter, Result as FmtResult},
@@ -8,7 +8,7 @@ use std::{
 #[derive(Debug)]
 pub struct Request<'buf> {
     path: &'buf str,
-    query_string: Option<&'buf str>,
+    query_string: Option<QueryString<'buf>>,
     method: Method,
 }
 
@@ -54,7 +54,7 @@ impl<'buf> TryFrom<&'buf [u8]> for Request<'buf> {
         let path = path_n_query
             .next()
             .ok_or(ParseError::InvalidRequest(request))?;
-        let query_string = path_n_query.next();
+        let query_string = path_n_query.next().map(|s| s.into());
 
         Ok(Self {
             method,
