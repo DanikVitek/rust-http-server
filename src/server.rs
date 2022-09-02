@@ -47,7 +47,7 @@ impl Server {
     }
 
     fn process_request(request: Request, _addr: SocketAddr) {
-        println!("{:?}", request);
+        println!("{}", request);
     }
 }
 
