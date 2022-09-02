@@ -1,9 +1,21 @@
 use std::{
-    io::{Read, Result as IoResult},
+    io::Read,
     net::{SocketAddr, TcpListener, TcpStream},
 };
 
-use crate::http::{Request, Response, StatusCode};
+use crate::http::{ParseError, Request, Response, StatusCode};
+
+pub trait Handler {
+    fn handle_request(&mut self, request: Request) -> Response;
+
+    fn handle_bad_request(&mut self, e: ParseError) -> Response {
+        println!("Failed to parse request: {}", e);
+        Response::new(
+            StatusCode::BadRequest,
+            Some("Failed to parse request".to_string()),
+        )
+    }
+}
 
 pub struct Server {
     host: String,
@@ -15,7 +27,7 @@ impl Server {
         Self { host, port }
     }
 
-    pub fn run(self) {
+    pub fn run(self, mut handler: impl Handler) {
         let listener: TcpListener = TcpListener::bind((&self.host as &str, self.port)).unwrap();
 
         println!("Listening on {}:{}", &self.host, self.port);
@@ -24,12 +36,12 @@ impl Server {
             match listener.accept() {
                 Err(e) => println!("Failed to establish TCP connection: {}", e),
 
-                Ok((stream, addr)) => Server::process_connection(stream, addr),
+                Ok((stream, addr)) => Server::process_connection(stream, addr, &mut handler),
             }
         }
     }
 
-    fn process_connection(mut stream: TcpStream, addr: SocketAddr) {
+    fn process_connection(mut stream: TcpStream, addr: SocketAddr, handler: &mut impl Handler) {
         println!("Established TCP connection with {}", addr);
 
         let mut buf = [0; 1024];
@@ -42,30 +54,16 @@ impl Server {
                     return;
                 }
 
-                let response_result = match Request::try_from(&buf as &[u8]) {
-                    Err(e) => {
-                        println!("Failed to parse request: {}", e);
-                        let bad_req = Response::new(
-                            StatusCode::BadRequest,
-                            Some("Failed to parse request".to_string()),
-                        );
-                        bad_req.send(&mut stream)
-                    }
-
-                    Ok(request) => Server::process_request(request, stream, addr)
+                let response = match Request::try_from(&buf as &[u8]) {
+                    Err(e) => handler.handle_bad_request(e),
+                    Ok(request) => handler.handle_request(request),
                 };
 
-                if let Err(e) = response_result {
+                if let Err(e) = response.send(&mut stream) {
                     println!("Failed to send response: {}", e);
                 }
             }
         };
-    }
-
-    fn process_request(request: Request, mut stream: TcpStream, _addr: SocketAddr) -> IoResult<()> {
-        println!("{}", request);
-        let response = Response::new(StatusCode::Ok, Some("<h1>IT WORKS!!!</h1>".to_string()));
-        response.send(&mut stream)
     }
 }
 
