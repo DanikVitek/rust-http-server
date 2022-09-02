@@ -12,6 +12,14 @@ pub struct Request<'buf> {
     method: Method,
 }
 
+impl<'buf> Request<'buf> {
+    pub fn path(&self) -> &'buf str { &self.path }
+
+    pub fn query_string(&self) -> Option<&QueryString<'buf>> { self.query_string.as_ref() }
+
+    pub fn method(&self) -> &Method { &self.method }
+}
+
 impl<'buf> Display for Request<'buf> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
