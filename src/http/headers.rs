@@ -54,7 +54,7 @@ impl<'buf> TryFrom<&'buf str> for Headers<'buf> {
     fn try_from(s: &'buf str) -> Result<Self, Self::Error> {
         let mut data = HashMap::new();
 
-        for pair in s.split("\r\n") {
+        for pair in s.split("\r\n").map(|header| header.trim()) {
             match pair.find(": ") {
                 Some(ind) => {
                     let (key, val) = pair.split_at(ind);
