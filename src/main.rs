@@ -26,6 +26,10 @@ struct TestHandler;
 impl Handler for TestHandler {
     fn handle_request(&mut self, request: http::Request) -> http::Response {
         println!("{}", request);
-        Response::new(StatusCode::Ok, Some("<h1>Hello World</h1>".to_string()))
+        Response::new(
+            StatusCode::Ok,
+            None,
+            Some("<h1>Hello World</h1>".to_string()),
+        )
     }
 }

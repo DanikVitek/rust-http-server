@@ -29,7 +29,10 @@ impl WebsiteHandler {
             Ok(canon_path) => {
                 let public_path = fs::canonicalize(&self.public_path).unwrap();
                 if !canon_path.starts_with(public_path) {
-                    println!("Directory Traversal Attack Attempted: {}", canon_path.display());
+                    println!(
+                        "Directory Traversal Attack Attempted: {}",
+                        canon_path.display()
+                    );
                     return None;
                 }
 
@@ -45,17 +48,18 @@ impl WebsiteHandler {
 
 impl Handler for WebsiteHandler {
     fn handle_request(&mut self, request: Request) -> Response {
-        println!("{}", request);
+        dbg!(&request);
+        println!("Request:\n{}", &request);
         match request.method() {
             Method::GET => match request.path() {
-                "/" => Response::new(StatusCode::Ok, self.read_file("/index.html")),
-                "/hello" => Response::new(StatusCode::Ok, self.read_file("/hello.html")),
+                "/" => Response::new(StatusCode::Ok, None, self.read_file("/index.html")),
+                "/hello" => Response::new(StatusCode::Ok, None, self.read_file("/hello.html")),
                 path => match self.read_file(path) {
-                    Some(file) => Response::new(StatusCode::Ok, Some(file)),
-                    None => Response::new(StatusCode::NotFound, None),
+                    Some(file_contents) => Response::new(StatusCode::Ok, None, Some(file_contents)),
+                    None => Response::new(StatusCode::NotFound, None, None),
                 },
             },
-            _ => Response::new(StatusCode::NotFound, None),
+            _ => Response::new(StatusCode::NotFound, None, None),
         }
     }
 }

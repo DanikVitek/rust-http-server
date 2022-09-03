@@ -1,17 +1,20 @@
-use super::StatusCode;
-use std::{
-    io::{Result as IoResult, Write},
-};
+use super::{Headers, StatusCode};
+use std::io::{Result as IoResult, Write};
 
 #[derive(Debug)]
-pub struct Response {
+pub struct Response<'ans> {
     status: StatusCode,
+    headers: Option<Headers<'ans>>,
     body: Option<String>,
 }
 
-impl Response {
-    pub fn new(status: StatusCode, body: Option<String>) -> Self {
-        Self { status, body }
+impl<'ans> Response<'ans> {
+    pub fn new(status: StatusCode, headers: Option<Headers<'ans>>, body: Option<String>) -> Self {
+        Self {
+            status,
+            headers,
+            body,
+        }
     }
 
     pub fn send(&self, stream: &mut impl Write) -> IoResult<()> {

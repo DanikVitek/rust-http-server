@@ -39,17 +39,11 @@ impl<'buf> TryFrom<&'buf str> for Method {
 }
 
 #[derive(Debug)]
-pub struct InvalidMethodString<'buf>(&'buf str);
-
-impl<'buf> InvalidMethodString<'buf> {
-    pub fn str(&self) -> &str {
-        return &self.0;
-    }
-}
+pub struct InvalidMethodString<'buf>(pub &'buf str);
 
 impl<'buf> fmt::Display for InvalidMethodString<'buf> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "InvalidMethod: {}", self.str())
+        write!(f, "InvalidMethod: {}", &self.0)
     }
 }
 
