@@ -14,10 +14,10 @@ impl<'buf> std::fmt::Display for QueryString<'buf> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Ok(for (i, (key, value)) in self.0.iter().enumerate() {
             match value {
-                Value::Single(val) => write!(f, "{}={}", key, val)?,
+                Value::Single(val) => write!(f, "{key}={val}")?,
                 Value::Multiple(vec) => {
                     for (i, val) in vec.iter().enumerate() {
-                        write!(f, "{}={}", key, val)?;
+                        write!(f, "{key}={val}")?;
                         if i + 1 < vec.len() {
                             write!(f, "&")?;
                         }

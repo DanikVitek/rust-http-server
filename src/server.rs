@@ -12,6 +12,7 @@ pub trait Handler {
         println!("Failed to parse request: {}", e);
         Response::new(
             StatusCode::BadRequest,
+            None,
             Some("Failed to parse request".to_string()),
         )
     }
